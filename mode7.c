@@ -27,20 +27,26 @@ int main(void) {
     imgMap = LoadImageFromTexture(texMap);
 
     while (!WindowShouldClose()) {
-        if (IsKeyDown(KEY_Q)) fFoVHalf += 1.0f * GetFrameTime();
-        if (IsKeyDown(KEY_A)) fFoVHalf -= 1.0f * GetFrameTime();
+        if (IsKeyDown(KEY_Q)) fNear += 1.0f * GetFrameTime();
+        if (IsKeyDown(KEY_A)) fNear -= 1.0f * GetFrameTime();
         
-        if (IsKeyDown(KEY_LEFT)) fWorldA -= 2.0f * GetFrameTime();
-        if (IsKeyDown(KEY_RIGHT)) fWorldA += 2.0f * GetFrameTime();
+        if (IsKeyDown(KEY_W)) fFar += 1.0f * GetFrameTime();
+        if (IsKeyDown(KEY_S)) fFar -= 1.0f * GetFrameTime();        
+
+        if (IsKeyDown(KEY_Z)) fFoVHalf += 1.0f * GetFrameTime();
+        if (IsKeyDown(KEY_X)) fFoVHalf -= 1.0f * GetFrameTime();
+
+        if (IsKeyDown(KEY_RIGHT)) fWorldA -= 1.0f * GetFrameTime();
+        if (IsKeyDown(KEY_LEFT)) fWorldA += 1.0f * GetFrameTime();
 
         if (IsKeyDown(KEY_UP)) {
             fWorldX += cosf(fWorldA) * fSpeed * GetFrameTime();
-            fWorldY += sinf(fWorldA) * fSpeed * GetFrameTime();
+            fWorldY -= sinf(fWorldA) * fSpeed * GetFrameTime();
         }
 
         if (IsKeyDown(KEY_DOWN)) {
             fWorldX -= cosf(fWorldA) * fSpeed * GetFrameTime();
-            fWorldY -= sinf(fWorldA) * fSpeed * GetFrameTime();
+            fWorldY += sinf(fWorldA) * fSpeed * GetFrameTime();
         }
 
         BeginDrawing();
@@ -67,13 +73,13 @@ static void DrawMode7Line(int y) {
     float fDepth = 1.0f / ((float)(y) / (SCREEN_HEIGHT / 2.0f) * (fFar - fNear) + fNear);
     
     Vector2 lineStart = {
-        .x = fWorldX - cosf(fWorldA - fFoVHalf) * fDepth,
-        .y = fWorldY - sinf(fWorldA - fFoVHalf) * fDepth
+        fWorldX - cosf(fWorldA - fFoVHalf) * fDepth,
+        fWorldY - sinf(fWorldA - fFoVHalf) * fDepth
     };
 
     Vector2 lineEnd = {
-        .x = fWorldX + cosf(fWorldA + fFoVHalf) * fDepth,
-        .y = fWorldY + sinf(fWorldA + fFoVHalf) * fDepth
+        fWorldX + cosf(fWorldA + fFoVHalf) * fDepth,
+        fWorldY + sinf(fWorldA + fFoVHalf) * fDepth
     };
 
     for (int x = 0; x < SCREEN_WIDTH; x++) {
