@@ -3,93 +3,89 @@
 
 #define SCREEN_WIDTH 1920
 #define SCREEN_HEIGHT 1080
-#define HALF_WIDTH (SCREEN_WIDTH / 2)
-#define HALF_HEIGHT (SCREEN_HEIGHT / 2)
-#define FOCAL_LENGTH 250
-#define SCALE 100
-#define SPEED 0.01
-
-typedef struct Player {
-    Vector2 position;
-    float angle;
-    float altitude;
-    Camera2D camera;
-} Player;
-
-Player player;
 
 Texture2D texSky;
 Texture2D texMap;
-RenderTexture2D target;
+Image imgMap;
 
-static void UpdateScreen(void);
-static void RenderFrame(void);
+float fWorldX = 1000.0f;
+float fWorldY = 1000.0f;
+float fWorldA = 0.1f;
+float fNear = 0.005f;
+float fFar = 0.03f; 
+float fFoVHalf = PI / 4.0f;
+float fSpeed = 50.0f; 
 
-int main() {
+static void DrawMode7Line(int);
 
-    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "raylib");
-
+int main(void) {
+    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "raylib - Mode7 Demo");
     SetTargetFPS(60);
 
     texSky = LoadTexture("resources/sky1.png");
     texMap = LoadTexture("resources/map1.png");
-
-    target = LoadRenderTexture(SCREEN_WIDTH, SCREEN_HEIGHT);
-
-    player.position = (Vector2){0.0f, 0.0f};
-    player.angle = 0.0f;
-    player.altitude = 1.0f;
-    player.camera = (Camera2D){0};
+    imgMap = LoadImageFromTexture(texMap);
 
     while (!WindowShouldClose()) {
-        UpdateScreen();
+        if (IsKeyDown(KEY_Q)) fFoVHalf += 1.0f * GetFrameTime();
+        if (IsKeyDown(KEY_A)) fFoVHalf -= 1.0f * GetFrameTime();
+        
+        if (IsKeyDown(KEY_LEFT)) fWorldA -= 2.0f * GetFrameTime();
+        if (IsKeyDown(KEY_RIGHT)) fWorldA += 2.0f * GetFrameTime();
 
-        BeginTextureMode(target);
-        ClearBackground(BLACK);
-        RenderFrame();
-        EndTextureMode();
+        if (IsKeyDown(KEY_UP)) {
+            fWorldX += cosf(fWorldA) * fSpeed * GetFrameTime();
+            fWorldY += sinf(fWorldA) * fSpeed * GetFrameTime();
+        }
+
+        if (IsKeyDown(KEY_DOWN)) {
+            fWorldX -= cosf(fWorldA) * fSpeed * GetFrameTime();
+            fWorldY -= sinf(fWorldA) * fSpeed * GetFrameTime();
+        }
 
         BeginDrawing();
         ClearBackground(RAYWHITE);
-        DrawTextureRec(target.texture, (Rectangle){0, 0, SCREEN_WIDTH, -SCREEN_HEIGHT}, (Vector2){0, 0}, WHITE);
         DrawFPS(10, 10);
+
+        for (int y = 0; y < SCREEN_HEIGHT / 2; y++) {
+            DrawMode7Line(y);
+        }
+
         EndDrawing();
     }
 
     UnloadTexture(texSky);
     UnloadTexture(texMap);
-    UnloadRenderTexture(target);
+    UnloadImage(imgMap);
 
     CloseWindow();
 
     return 0;
 }
 
-static void UpdateScreen(void) {
-    if (IsKeyDown(KEY_W)) {
-        player.position.x += cosf(player.angle) * SPEED;
-        player.position.y += sinf(player.angle) * SPEED;
-    }
-    if (IsKeyDown(KEY_S)) {
-        player.position.x -= cosf(player.angle) * SPEED;
-        player.position.y -= sinf(player.angle) * SPEED;
-    }
-    if (IsKeyDown(KEY_A)) {
-        player.angle -= SPEED;
-    }
-    if (IsKeyDown(KEY_D)) {
-        player.angle += SPEED;
-    }
-    if (IsKeyDown(KEY_Q)) {
-        player.altitude += SPEED;
-    }
-    if (IsKeyDown(KEY_E)) {
-        player.altitude -= SPEED;
-    }
+static void DrawMode7Line(int y) {
+    float fDepth = 1.0f / ((float)(y) / (SCREEN_HEIGHT / 2.0f) * (fFar - fNear) + fNear);
+    
+    Vector2 lineStart = {
+        .x = fWorldX - cosf(fWorldA - fFoVHalf) * fDepth,
+        .y = fWorldY - sinf(fWorldA - fFoVHalf) * fDepth
+    };
 
-    player.altitude = Clamp(player.altitude, 0.3, 4.0);
-}
+    Vector2 lineEnd = {
+        .x = fWorldX + cosf(fWorldA + fFoVHalf) * fDepth,
+        .y = fWorldY + sinf(fWorldA + fFoVHalf) * fDepth
+    };
 
-static void RenderFrame(void) {
+    for (int x = 0; x < SCREEN_WIDTH; x++) {
+        float fSampleWidth = (float)x / (float)SCREEN_WIDTH;
+        float fSampleX = (lineEnd.x - lineStart.x) * fSampleWidth + lineStart.x;
+        float fSampleY = (lineEnd.y - lineStart.y) * fSampleWidth + lineStart.y;
 
+        int texX = ((int)fSampleX % texMap.width + texMap.width) % texMap.width;
+        int texY = ((int)fSampleY % texMap.height + texMap.height) % texMap.height;
+
+        Color color = GetImageColor(imgMap, texX, texY);
+
+        DrawPixel(x, (SCREEN_HEIGHT / 2) + y, color);
+    }
 }
