@@ -20,14 +20,15 @@ float fWorldX = 0.0f;
 float fWorldY = 0.0f;
 float fWorldA = 0.1f;
 float fNear = 0.005f;
-float fFar = 20.0f; 
+float fFar = 50.0f; 
 float fFoVHalf = PI / 4.0f;
-float fSpeed = 50.0f; 
+float fSpeed = 100.0f; 
+float skyOffset = 0.0f;
 
 static void DrawMode7Line(int);
 
 int main(void) {
-    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "raylib - Mode7 Demo");
+    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Mode7 Demo");
     SetTargetFPS(60);
 
     texSky = LoadTexture("resources/sky1.png");
@@ -41,11 +42,17 @@ int main(void) {
         if (IsKeyDown(KEY_W)) fFar += 0.1f * fSpeed * GetFrameTime();
         if (IsKeyDown(KEY_S)) fFar -= 0.1f * fSpeed * GetFrameTime();        
 
-        if (IsKeyDown(KEY_Z)) fFoVHalf += 0.1f * fSpeed * GetFrameTime();
-        if (IsKeyDown(KEY_X)) fFoVHalf -= 0.1f * fSpeed * GetFrameTime();
+        if (IsKeyDown(KEY_Z)) fFoVHalf += 0.1f * GetFrameTime();
+        if (IsKeyDown(KEY_X)) fFoVHalf -= 0.1f * GetFrameTime();
 
-        if (IsKeyDown(KEY_RIGHT)) fWorldA += 1.0f * GetFrameTime();
-        if (IsKeyDown(KEY_LEFT)) fWorldA -= 1.0f * GetFrameTime();
+        if (IsKeyDown(KEY_RIGHT)){
+            fWorldA += 1.0f * GetFrameTime();
+            skyOffset += 1.0f * fSpeed * 1.5f * GetFrameTime();
+        } 
+        if (IsKeyDown(KEY_LEFT)) {
+            fWorldA -= 1.0f * GetFrameTime();
+            skyOffset -= 1.0f * fSpeed * 1.5f * GetFrameTime();   
+        }
 
         if (IsKeyDown(KEY_UP)) {
             fWorldX += cosf(fWorldA) * fSpeed * GetFrameTime();
@@ -69,13 +76,22 @@ int main(void) {
         frustum.Near2.x = fWorldX + cosf(fWorldA + fFoVHalf) * fNear;
         frustum.Near2.y = fWorldY + sinf(fWorldA + fFoVHalf) * fNear;
 
+        skyOffset = fmod(skyOffset, texSky.width);
+
         BeginDrawing();
         ClearBackground(RAYWHITE);
-        DrawFPS(10, 10);
+        
+        Rectangle skySource = { skyOffset, 0, texSky.width, texSky.height };
+        Rectangle skyDest = { 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT / 2 };
+        DrawTexturePro(texSky, skySource, skyDest, (Vector2){0, 0}, 0.0f, WHITE);
 
         for (int y = 0; y < SCREEN_HEIGHT / 2; y++) {
             DrawMode7Line(y);
         }
+
+        DrawLine(0, SCREEN_HEIGHT/2, SCREEN_WIDTH, SCREEN_HEIGHT/2, BLUE);
+
+        DrawFPS(10, 10);
 
         EndDrawing();
     }
@@ -90,7 +106,7 @@ int main(void) {
 }
 
 static void DrawMode7Line(int y) {
-    float fSampleDepth = (float)y / ((float)GetScreenHeight() / 2.0f);
+    float fSampleDepth = (float)y / ((float)SCREEN_HEIGHT / 2.0f );
 
     float fStartX = (frustum.Far1.x - frustum.Near1.x) / (fSampleDepth) + frustum.Near1.x;
     float fStartY = (frustum.Far1.y - frustum.Near1.y) / (fSampleDepth) + frustum.Near1.y;
@@ -98,20 +114,15 @@ static void DrawMode7Line(int y) {
     float fEndY = (frustum.Far2.y - frustum.Near2.y) / (fSampleDepth) + frustum.Near2.y;
 
     for (int x = 0; x < SCREEN_WIDTH; x++) {
-        float fSampleWidth = (float)x / (float)GetScreenWidth();
+        float fSampleWidth = (float)x / (float)SCREEN_WIDTH;
         float fSampleX = (fEndX - fStartX) * fSampleWidth + fStartX;
         float fSampleY = (fEndY - fStartY) * fSampleWidth + fStartY;
-
-        // fSampleX = fmod(fSampleX, (texMap.width + texMap.width));
-        // fSampleX = fmod(fSampleX, texMap.width);
-        // fSampleY = fmod(fSampleY, (texMap.height + texMap.height));
-        // fSampleY = fmod(fSampleY, texMap.height);
 
         int texX = ((int)fSampleX % texMap.width + texMap.width) % texMap.width;
         int texY = ((int)fSampleY % texMap.height + texMap.height) % texMap.height;
 
         Color color = GetImageColor(imgMap, texX, texY);
 
-        DrawPixel(x, (GetScreenHeight() / 2) + y, color);
+        DrawPixel(x, (SCREEN_HEIGHT / 2) + y, color);
     }
 }
